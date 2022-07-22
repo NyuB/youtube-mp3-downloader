@@ -1,0 +1,4 @@
+pytube == 12.1.0
+moviepy == 1.0.2
+toml == 0.10.2
+pyinstaller == 5.2
