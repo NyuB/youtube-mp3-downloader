@@ -1,3 +1,5 @@
+![CI-master](https://github.com/NyuB/youtube-mp3-downloader/actions/workflows/ci.yml/badge.svg?branch=master)
+
 ## Install/Bundle
 ### PyInstaller
 #### Windows
