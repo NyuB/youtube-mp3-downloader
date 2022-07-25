@@ -1,5 +1,5 @@
 import ytdl.moviepy_pyinstaller_imports # PyInstaller requirement, do not remove
-from pytube import YouTube
+from pytube import YouTube, Playlist
 from moviepy.editor import AudioFileClip
 import toml
 import sys
@@ -13,9 +13,12 @@ class MP4FileNotFound(Exception):
     def __init__(self, path):
         super().__init__("No mp4 file found at {}".format(path))
 
+def with_extension(filename: str, extension: str):
+    return filename if filename.endswith("." + extension) else "{}.{}".format(filename, extension)
+
 def move_mp4_to_mp3(filename, folder, erase_mp4 = True):
-    mp4_file_path = os.path.join(folder, filename+".mp4")
-    mp3_file_path = os.path.join(folder, filename+".mp3")
+    mp4_file_path = os.path.join(folder, with_extension(filename, "mp4"))
+    mp3_file_path = os.path.join(folder, with_extension(filename, "mp3"))
 
     if not(os.path.exists(mp4_file_path)):
         raise MP4FileNotFound(mp4_file_path)
@@ -34,7 +37,7 @@ def download_audio_mp4(youtube: YouTube, filename, folder):
     if len(audio) < 1:
         raise NoAudioMP4(youtube.js_url)
 
-    audio[0].download(filename = filename+".mp4", output_path = folder)
+    audio[0].download(filename = with_extension(filename, "mp4"), output_path = folder)
 
 def download_youtube_to_mp3(youtube_video_url, output_filename, folder = "."):
     yt = YouTube(url=youtube_video_url)
@@ -47,6 +50,7 @@ def usage_fn(all_args):
         print("Usage :")
         print("\tytdl single <url> <filename>")
         print("\tytdl list <list_file_toml>")
+        print("\tytdl format_playlist <url> <title>")
     return usage
 
 def from_url(args):
@@ -66,7 +70,19 @@ def from_config(args):
             except Exception as e:
                 print("\tFAIL", e)
 
-sub_commands = { "single":from_url, "list": from_config }
+def config_from_playlist_url(args):
+    url = args[0]
+    title = args[1]
+    output_filename = args[2]
+    playlist = Playlist(url)
+    title_configs = {}
+    for url in playlist.video_urls:
+        video = YouTube(url)
+        title_configs[video.title] = { "url": url }
+    with open(with_extension(output_filename, "toml"), 'a') as output_file:
+        toml.dump({title: title_configs}, output_file)
+
+sub_commands = { "single": from_url, "list": from_config, "format_playlist": config_from_playlist_url }
 def main(args):
     command = sub_commands.get(args[0], usage_fn(args))
     command(args[1:])
