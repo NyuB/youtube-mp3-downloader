@@ -8,10 +8,20 @@ on:
     - '.gitignore'
     - .github/workflows/release.yml
 
-
 jobs:
-  tests-linux:
-    runs-on: ubuntu-latest
+  Tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: windows-latest
+            venv-activate: .venv\Scripts\activate
+            name: Windows
+          - os: ubuntu-latest
+            venv-activate: source .venv/bin/activate
+            name: Linux
+
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -19,27 +29,10 @@ jobs:
       - name: Install virtualenv
         run: |
           python -m venv .venv
-          source .venv/bin/activate
+          ${{ matrix.venv-activate }}
           pip install -r requirements.txt
 
       - name: Run unittest
         run: |
-          source .venv/bin/activate
-          python -m unittest discover -p *_test.py
-
-  tests-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
-      - name: Install virtualenv
-        run: |
-          python -m venv .venv
-          .venv\Scripts\activate
-          pip install -r requirements.txt
-
-      - name: Run unittest
-        run: |
-          .venv\Scripts\activate
+          ${{ matrix.venv-activate }}
           python -m unittest discover -p *_test.py
