@@ -32,7 +32,86 @@ jobs:
           ${{ matrix.venv-activate }}
           pip install -r requirements.txt
 
-      - name: Run unittest
+      - name: Run python unittest
         run: |
           ${{ matrix.venv-activate }}
           python -m unittest discover -p *_test.py
+
+
+  # Release:
+  #   if: (github.ref_name == 'master') && (contains(github.event.head_commit.message, '[release]'))
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: release
+  #       uses: actions/create-release@v1
+  #       id: create_release
+  #       env:
+  #         GITHUB_TOKEN: ${{ github.token }}
+  #       with:
+  #         draft: false
+  #         prerelease: false
+  #         release_name: ytdl-${{ github.ref }}
+  #         tag_name: ${{ github.ref }}
+  #         body_path: README.md
+
+  Package:
+    needs: [Tests]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: windows-latest
+            venv-activate: .venv\Scripts\activate
+            name: Windows
+            binary: dist/ytdl.exe
+          - os: ubuntu-latest
+            venv-activate: source .venv/bin/activate
+            name: Linux
+            binary: dist/ytdl
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Install virtualenv
+        run: |
+          python -m venv .venv
+          ${{ matrix.venv-activate }}
+          pip install -r requirements.txt
+
+      - name: PyInstaller
+        run: |
+          ${{ matrix.venv-activate }}
+          pyinstaller --onefile --name ytdl --paths .venv/Lib/site-packages ytdl/main.py
+
+      - name: Binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}-binary
+          path: ${{ matrix.binary }}
+
+  Release:
+    if: (github.ref_name == 'master') && (contains(github.event.head_commit.message, '[release]'))
+    needs: [Package]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Windows binaries artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: Windows-binary
+        path: binaries/windows
+
+    - name: Download Linux binaries artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: Linux-binary
+        path: binaries/linux
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: ${{ github.event.head_commit.message }}
+        tag_name: release
+        files: |
+          binaries/linux/ytdl
+          binaries/windows/ytdl.exe
+        fail_on_unmatched_files: true
