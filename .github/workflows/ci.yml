@@ -37,23 +37,6 @@ jobs:
           ${{ matrix.venv-activate }}
           python -m unittest discover -p *_test.py
 
-
-  # Release:
-  #   if: (github.ref_name == 'master') && (contains(github.event.head_commit.message, '[release]'))
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: release
-  #       uses: actions/create-release@v1
-  #       id: create_release
-  #       env:
-  #         GITHUB_TOKEN: ${{ github.token }}
-  #       with:
-  #         draft: false
-  #         prerelease: false
-  #         release_name: ytdl-${{ github.ref }}
-  #         tag_name: ${{ github.ref }}
-  #         body_path: README.md
-
   Package:
     needs: [Tests]
     strategy:
