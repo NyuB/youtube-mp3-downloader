@@ -3,37 +3,45 @@ from ytdl.main import main
 import os
 import shutil
 import toml
+from typing import Iterable, Container, Any, Callable
 
-download_folder = "Arcade Fire"
+arcade_download_folder = "Arcade Fire"
+
+def run_main_catching_exit(args: list[str]):
+    try:
+        main(args)
+    except SystemExit as e:
+        if e.code != 0:
+            raise Exception("Expected code 0 but got "+ str(e.code))
 
 class DownloadFromTOMLTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        main(["list", "tests/resources/arcade_fire.toml"])
-    
+        run_main_catching_exit(["list", "tests/resources/arcade_fire.toml"])
+
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(download_folder)
+        shutil.rmtree(arcade_download_folder)
     
     def test_two_title_playlists_creates_two_files(self):
-        created_files = os.listdir(download_folder)
+        created_files = os.listdir(arcade_download_folder)
         self.assertEqual(2, len(created_files))
 
     def test_two_title_playlists_creates_mp3_files(self):
-        created_files = os.listdir(download_folder)
+        created_files = os.listdir(arcade_download_folder)
         for filename in created_files:
             self.assertTrue(filename.endswith(".mp3"))
     
     def test_two_title_playlists_names_files_correctly(self):
-        remove_ext_mp3 = lambda name: name.replace(".mp3", '')
-        created_files = sorted(list(map(remove_ext_mp3, os.listdir(download_folder))))
+        remove_ext_mp3: Callable[[str], str] = lambda name: name.replace(".mp3", '')
+        created_files: list[str] = sorted(list(map(remove_ext_mp3, os.listdir(arcade_download_folder))))
         self.assertListEqual(["Intervention", "No Cars Go"], created_files)
 
 class DownloadSingleUrlTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        main(["single", "https://www.youtube.com/watch?v=TeQqn3olPn0", "ade"])
+        run_main_catching_exit(["single", "https://www.youtube.com/watch?v=TeQqn3olPn0", "ade"])
     
     @classmethod
     def tearDownClass(cls):
@@ -46,13 +54,18 @@ class DownloadSingleUrlTest(unittest.TestCase):
 class FormatPlaylistToTOMLTest(unittest.TestCase):
     expected_toml_file = "weezer_white_album.toml"
 
-    def assertAllIn(self, subset, container):
+    InAssertable = Iterable[Any] | Container[Any]
+    def assertAllIn(self, subset: Iterable[Any], container: InAssertable):
         for elem in subset:
             self.assertIn(elem, container)
 
     @classmethod
     def setUpClass(cls):
-        main(["format_playlist", "https://www.youtube.com/playlist?list=PLg4pQIhMIijXQI-NrFBToDVxmNB_d86wI", "Weezer", "weezer_white_album"])
+        run_main_catching_exit(["format_playlist",
+            "https://www.youtube.com/playlist?list=PLg4pQIhMIijXQI-NrFBToDVxmNB_d86wI",
+            "Weezer",
+            "weezer_white_album"
+            ])
 
     @classmethod
     def tearDownClass(cls):

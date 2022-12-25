@@ -4,6 +4,7 @@ from moviepy.editor import AudioFileClip
 import toml
 import sys
 import os
+import typer
 
 class NoAudioMP4(Exception):
     def __init__(self, url):
@@ -53,14 +54,18 @@ def usage_fn(all_args):
         print("\tytdl format_playlist <url> <title>")
     return usage
 
-def from_url(args):
+app = typer.Typer()
+
+@app.command(name="single")
+def from_url(video_url: str, output_filename: str):
     try:
-        download_youtube_to_mp3(args[0], args[1])
+        download_youtube_to_mp3(video_url, output_filename)
     except Exception as e:
         print(e)
 
-def from_config(args):
-    toml_config = toml.load(args[0])
+@app.command(name="list")
+def from_config(config_file: str):
+    toml_config = toml.load(config_file)
     for destination_folder, videos in toml_config.items():
         for title, params in videos.items():
             print(title, params["url"])
@@ -70,22 +75,18 @@ def from_config(args):
             except Exception as e:
                 print("\tFAIL", e)
 
-def config_from_playlist_url(args):
-    url = args[0]
-    title = args[1]
-    output_filename = args[2]
+@app.command(name="format_playlist")
+def config_from_playlist_url(url: str, title: str, output_config_file: str):
     playlist = Playlist(url)
     title_configs = {}
     for url in playlist.video_urls:
         video = YouTube(url)
         title_configs[video.title] = { "url": url }
-    with open(with_extension(output_filename, "toml"), 'a') as output_file:
+    with open(with_extension(output_config_file, "toml"), 'a') as output_file:
         toml.dump({title: title_configs}, output_file)
 
-sub_commands = { "single": from_url, "list": from_config, "format_playlist": config_from_playlist_url }
-def main(args):
-    command = sub_commands.get(args[0], usage_fn(args))
-    command(args[1:])
+def main(args: list[str]):
+    app(args)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
