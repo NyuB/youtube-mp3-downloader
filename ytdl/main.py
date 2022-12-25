@@ -1,23 +1,24 @@
-import ytdl.moviepy_pyinstaller_imports # PyInstaller requirement, do not remove
-from pytube import YouTube, Playlist
-from moviepy.editor import AudioFileClip
+# PyInstaller requirement, do not remove
+import ytdl.moviepy_pyinstaller_imports #type: ignore
+from pytube import YouTube, Playlist, StreamQuery #type: ignore
+from moviepy.editor import AudioFileClip #type: ignore
 import toml
 import sys
 import os
 import typer
 
 class NoAudioMP4(Exception):
-    def __init__(self, url):
+    def __init__(self, url: str):
         super().__init__("No audio stream in mp4 format found at {}".format(url))
 
 class MP4FileNotFound(Exception):
-    def __init__(self, path):
+    def __init__(self, path: str):
         super().__init__("No mp4 file found at {}".format(path))
 
 def with_extension(filename: str, extension: str):
     return filename if filename.endswith("." + extension) else "{}.{}".format(filename, extension)
 
-def move_mp4_to_mp3(filename, folder, erase_mp4 = True):
+def move_mp4_to_mp3(filename: str, folder: str, erase_mp4: bool = True) -> None:
     mp4_file_path = os.path.join(folder, with_extension(filename, "mp4"))
     mp3_file_path = os.path.join(folder, with_extension(filename, "mp3"))
 
@@ -30,29 +31,19 @@ def move_mp4_to_mp3(filename, folder, erase_mp4 = True):
     if erase_mp4:
         os.remove(mp4_file_path)
 
-def get_audio_mp4_stream(youtube: YouTube):
-    return youtube.streams.filter(only_audio=True, file_extension="mp4")
+def get_audio_mp4_stream(youtube: YouTube) -> StreamQuery:
+    return youtube.streams.filter(only_audio=True, file_extension="mp4") #type: ignore
 
-def download_audio_mp4(youtube: YouTube, filename, folder):
+def download_audio_mp4(youtube: YouTube, filename: str, folder: str) -> None:
     audio = get_audio_mp4_stream(youtube)
     if len(audio) < 1:
         raise NoAudioMP4(youtube.js_url)
+    audio[0].download(filename = with_extension(filename, "mp4"), output_path = folder) #type: ignore
 
-    audio[0].download(filename = with_extension(filename, "mp4"), output_path = folder)
-
-def download_youtube_to_mp3(youtube_video_url, output_filename, folder = "."):
+def download_youtube_to_mp3(youtube_video_url: str, output_filename: str, folder: str = "."):
     yt = YouTube(url=youtube_video_url)
     download_audio_mp4(yt, output_filename, folder)
     move_mp4_to_mp3(output_filename, folder)
-
-def usage_fn(all_args):
-    def usage(_):
-        print("Command >>>", "ytdl", *all_args, "<<< invalid")
-        print("Usage :")
-        print("\tytdl single <url> <filename>")
-        print("\tytdl list <list_file_toml>")
-        print("\tytdl format_playlist <url> <title>")
-    return usage
 
 app = typer.Typer()
 
@@ -78,7 +69,7 @@ def from_config(config_file: str):
 @app.command(name="format_playlist")
 def config_from_playlist_url(url: str, title: str, output_config_file: str):
     playlist = Playlist(url)
-    title_configs = {}
+    title_configs: dict[str, dict[str, str]] = {}
     for url in playlist.video_urls:
         video = YouTube(url)
         title_configs[video.title] = { "url": url }
